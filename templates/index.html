@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>AI Study Pal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>📘 AI Study Pal</h1>
+
+  <form method="POST" action="/generate" class="card">
+    <h2>Inputs</h2>
+    <label>Subject</label>
+    <select name="subject">
+      {% for s in subjects %}
+        <option value="{{ s }}" {% if s == selected_subject %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Hours (this week)</label>
+    <input type="number" name="hours" min="1" max="60" value="{{ hours or 8 }}"/>
+
+    <label>Scenario</label>
+    <select name="scenario">
+      <option value="exam" {% if scenario == 'exam' %}selected{% endif %}>Exam prep</option>
+      <option value="homework" {% if scenario == 'homework' %}selected{% endif %}>Homework</option>
+    </select>
+
+    <label>Topic for recommendations (optional)</label>
+    <input type="text" name="query" value="{{ query or '' }}" placeholder="e.g., computer science, photosynthesis"/>
+
+    <label>Text to summarize (optional)</label>
+    <textarea name="short_text" rows="5" placeholder="Paste up to ~200 words">{{ request.form.short_text or '' }}</textarea>
+
+    <button type="submit">Generate</button>
+  </form>
+
+  {% if quiz_acc is defined %}
+    <div class="card">
+      <h2>Model Metrics</h2>
+      <p>Difficulty classifier — Accuracy: {{ '%.2f'|format(quiz_acc) }}, F1: {{ '%.2f'|format(quiz_f1) }}</p>
+      <small>Note: small dataset → low metrics; a heuristic fallback is used if classes are imbalanced.</small>
+    </div>
+  {% endif %}
+
+  {% if schedule %}
+    <div class="card">
+      <h2>Study Plan (7 days)
+        {% if csv_ready %}
+          <a class="btn" href="/download_schedule" style="float:right;">⬇️ Download Schedule CSV</a>
+        {% endif %}
+      </h2>
+      <ul>
+        {% for row in schedule %}
+          <li><strong>{{ row.date }}</strong> — {{ row.hours }}h — {{ row.tasks }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if subj_tips %}
+    <div class="card">
+      <h2>Study Tips for {{ selected_subject }}</h2>
+      <p>{{ subj_tips }}</p>
+    </div>
+  {% endif %}
+
+  {% if cluster_info %}
+    <div class="card">
+      <h2>Topic Cluster</h2>
+      <p><strong>Cluster:</strong> {{ cluster_info.id }} — <strong>Keywords:</strong> {{ cluster_info.keywords }}</p>
+      {% if cluster_info.peers %}
+        <h3>Related in this cluster</h3>
+        <ul>
+          {% for p in cluster_info.peers %}
+            <li><strong>{{ p.subject }}</strong> — Tip: {{ p.study_tips }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if recommendations %}
+    <div class="card">
+      <h2>Recommended Subjects & Tips</h2>
+      {% for r in recommendations %}
+        <div class="chip"><strong>{{ r.subject }}</strong></div>
+        <p>Tip: {{ r.study_tips }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if quiz %}
+    <div class="card">
+      <h2>Quiz (auto-generated)
+        <a class="btn" href="/download_quiz" style="float:right;">⬇️ Download Quiz CSV</a>
+      </h2>
+      <ol>
+        {% for q in quiz %}
+          <li style="margin-bottom:12px;">
+            <div><strong>{{ q.question }}</strong> <em>({{ q.difficulty }})</em></div>
+            <ol type="A" style="margin-top:6px;">
+              {% for opt in q.options %}
+                <li>{{ opt }}</li>
+              {% endfor %}
+            </ol>
+            <details>
+              <summary>Show answer</summary>
+              <div>Correct option index: {{ q.answer_idx + 1 }}</div>
+            </details>
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+  {% endif %}
+
+  {% if resources %}
+    <div class="card">
+      <h2>Resources</h2>
+      <ul>
+        {% for name, url in resources %}
+          <li><a href="{{ url }}" target="_blank">{{ name }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if summary %}
+    <div class="card">
+      <h2>Summary (~50 words)</h2>
+      <p>{{ summary }}</p>
+    </div>
+  {% endif %}
+
+  {% if feedback %}
+    <div class="card">
+      <h2>Motivational Feedback</h2>
+      <p>💡 {{ feedback }}</p>
+    </div>
+  {% endif %}
+
+  <footer>Built for your AI Capstone — Study Plans • Recommendations • Summaries • Tips • Quizzes • Clusters</footer>
+</body>
+</html>
